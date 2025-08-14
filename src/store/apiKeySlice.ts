@@ -86,25 +86,6 @@ const apiKeySlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
-    loadSampleData: (state) => {
-      const sampleData: ApiKey[] = [
-        {
-          id: 1,
-          name: "Production API Key",
-          value: "tvly-1234567890abcdef1234567890",
-          usage: 24,
-          created_at: "2024-01-15T10:30:00Z",
-        },
-        {
-          id: 2,
-          name: "Development API Key",
-          value: "tvly-abcdef1234567890abcdef12",
-          usage: 5,
-          created_at: "2024-01-10T09:15:00Z",
-        },
-      ];
-      state.apiKeys = sampleData;
-    },
   },
   extraReducers: (builder) => {
     // Fetch API Keys

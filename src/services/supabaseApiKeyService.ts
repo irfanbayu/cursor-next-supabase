@@ -9,7 +9,7 @@ import {
 const generateApiKey = (): string => {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "tvly-";
+  let result = "byw-";
   for (let i = 0; i < 28; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
