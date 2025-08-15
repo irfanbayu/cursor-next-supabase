@@ -1,9 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import apiKeyReducer from "./apiKeySlice";
+import sidebarReducer from "./sidebarSlice";
 
 export const store = configureStore({
   reducer: {
     apiKeys: apiKeyReducer,
+    sidebar: sidebarReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
