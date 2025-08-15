@@ -12,6 +12,7 @@ import {
   loadSampleData,
 } from "../../store/apiKeySlice";
 import type { ApiKey } from "../../store/apiKeySlice";
+import ConfirmationModal, { Toast } from "../../components/Notification";
 
 export default function Dashboard() {
   const dispatch = useAppDispatch();
@@ -26,20 +27,56 @@ export default function Dashboard() {
   });
   const [visibleKeys, setVisibleKeys] = useState<Set<number>>(new Set());
 
+  // Confirmation modal states
+  const [showCreateConfirmation, setShowCreateConfirmation] = useState(false);
+  const [showEditConfirmation, setShowEditConfirmation] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deletingKeyId, setDeletingKeyId] = useState<number | null>(null);
+
+  // Toast notification states
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+    isVisible: boolean;
+  }>({
+    message: "",
+    type: "success",
+    isVisible: false,
+  });
+
   // Load API keys from Supabase on component mount
   useEffect(() => {
     dispatch(fetchApiKeys());
   }, [dispatch]);
+
+  const handleCreateConfirmation = () => {
+    setShowCreateConfirmation(true);
+  };
+
+  const closeCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setFormData({ name: "", value: "" });
+  };
 
   const handleCreateKey = async () => {
     try {
       await dispatch(
         createApiKey({ name: formData.name, value: formData.value })
       ).unwrap();
-      setFormData({ name: "", value: "" });
-      setIsCreateModalOpen(false);
+      closeCreateModal();
+      setShowCreateConfirmation(false);
+      setToast({
+        message: "✅ API key created successfully!",
+        type: "success",
+        isVisible: true,
+      });
     } catch (error) {
       console.error("Failed to create API key:", error);
+      setToast({
+        message: "❌ Failed to create API key",
+        type: "error",
+        isVisible: true,
+      });
     }
   };
 
@@ -54,29 +91,69 @@ export default function Dashboard() {
           value: formData.value,
         })
       ).unwrap();
-      setFormData({ name: "", value: "" });
-      setEditingKey(null);
-      setIsEditModalOpen(false);
+      closeEditModal();
+      setShowEditConfirmation(false);
+      setToast({
+        message: "✅ API key updated successfully!",
+        type: "success",
+        isVisible: true,
+      });
     } catch (error) {
-      console.error("Failed to update API key:", error);
+      console.error("❌ Failed to update API key:", error);
+      setToast({
+        message: "❌ Failed to update API key",
+        type: "error",
+        isVisible: true,
+      });
     }
   };
 
+  const handleEditConfirmation = () => {
+    setShowEditConfirmation(true);
+  };
+
   const handleDeleteKey = async (id: number) => {
-    if (confirm("Are you sure you want to delete this API key?")) {
-      try {
-        await dispatch(deleteApiKey(id)).unwrap();
-      } catch (error) {
-        console.error("Failed to delete API key:", error);
-      }
+    setDeletingKeyId(id);
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleDeleteConfirmation = async () => {
+    if (!deletingKeyId) return;
+
+    try {
+      await dispatch(deleteApiKey(deletingKeyId)).unwrap();
+      setShowDeleteConfirmation(false);
+      setDeletingKeyId(null);
+      setToast({
+        message: "✅ API key deleted successfully!",
+        type: "info",
+        isVisible: true,
+      });
+    } catch (error) {
+      console.error("Failed to delete API key:", error);
+      setToast({
+        message: "❌ Failed to delete API key",
+        type: "error",
+        isVisible: true,
+      });
     }
   };
 
   const handleIncrementUsage = async (id: number) => {
     try {
       await dispatch(incrementUsage(id)).unwrap();
+      setToast({
+        message: "✅ Usage count added successfully!",
+        type: "success",
+        isVisible: true,
+      });
     } catch (error) {
       console.error("Failed to increment usage:", error);
+      setToast({
+        message: "❌ Failed to add usage count",
+        type: "error",
+        isVisible: true,
+      });
     }
   };
 
@@ -84,6 +161,12 @@ export default function Dashboard() {
     setEditingKey(key);
     setFormData({ name: key.name, value: key.value });
     setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingKey(null);
+    setFormData({ name: "", value: "" });
   };
 
   const toggleKeyVisibility = (keyId: number) => {
@@ -108,9 +191,25 @@ export default function Dashboard() {
     });
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("API key copied to clipboard!");
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast({
+        message: "✅ API key copied to clipboard successfully!",
+        type: "success",
+        isVisible: true,
+      });
+    } catch (error) {
+      setToast({
+        message: "❌ Failed to copy API key to clipboard",
+        type: "error",
+        isVisible: true,
+      });
+    }
+  };
+
+  const closeToast = () => {
+    setToast((prev) => ({ ...prev, isVisible: false }));
   };
 
   const formatApiKey = (key: ApiKey) => {
@@ -685,14 +784,14 @@ export default function Dashboard() {
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={closeCreateModal}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                   disabled={loading}
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleCreateKey}
+                  onClick={handleCreateConfirmation}
                   disabled={!formData.name.trim() || loading}
                   className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -746,14 +845,14 @@ export default function Dashboard() {
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={closeEditModal}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                   disabled={loading}
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleEditKey}
+                  onClick={handleEditConfirmation}
                   disabled={!formData.name.trim() || loading}
                   className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -764,6 +863,61 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Create Confirmation Modal */}
+      {showCreateConfirmation && (
+        <ConfirmationModal
+          isOpen={showCreateConfirmation}
+          onClose={() => setShowCreateConfirmation(false)}
+          onConfirm={handleCreateKey}
+          title="Confirm Creation"
+          message={`Are you sure you want to create API key "${formData.name}"?`}
+          confirmText="Create"
+          cancelText="Cancel"
+          type="create"
+          loading={loading}
+        />
+      )}
+
+      {/* Edit Confirmation Modal */}
+      {showEditConfirmation && editingKey && (
+        <ConfirmationModal
+          isOpen={showEditConfirmation}
+          onClose={() => setShowEditConfirmation(false)}
+          onConfirm={handleEditKey}
+          title="Confirm Update"
+          message={`Are you sure you want to update API key "${editingKey.name}"?`}
+          confirmText="Update"
+          cancelText="Cancel"
+          type="edit"
+          loading={loading}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && deletingKeyId && (
+        <ConfirmationModal
+          isOpen={showDeleteConfirmation}
+          onClose={() => setShowDeleteConfirmation(false)}
+          onConfirm={handleDeleteConfirmation}
+          title="Confirm Deletion"
+          message={`Are you sure you want to delete API key "${
+            apiKeys.find((key) => key.id === deletingKeyId)?.name
+          }"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          type="delete"
+          loading={loading}
+        />
+      )}
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={closeToast}
+      />
     </div>
   );
 }
