@@ -97,7 +97,7 @@ const Sidebar = () => {
       <div className="p-6">
         <div className="flex items-center space-x-2 mb-8">
           <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">T</span>
+            <span className="text-white font-bold text-sm">B</span>
           </div>
           {!isCollapsed && (
             <span className="text-xl font-bold text-gray-900">Bayayaw AI</span>

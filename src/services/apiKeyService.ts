@@ -1,161 +1,134 @@
-import axios from "axios";
-import { ApiKey } from "../store/apiKeySlice";
+import { supabase } from "../../lib/supabaseClient";
+import type { ApiKey } from "../store/apiKeySlice";
 
-// Create axios instance
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+export interface CreateApiKeyData {
+  name: string;
+  value?: string;
+}
 
-// Mock data for development (replace with actual API calls)
-const mockApiKeys: ApiKey[] = [
-  {
-    id: "1",
-    name: "Production API Key",
-    key: "pk_live_1234567890abcdef",
-    description: "API key for production environment",
-    createdAt: "2024-01-15T10:30:00Z",
-    lastUsed: "2024-01-20T14:22:00Z",
-    isActive: true,
-  },
-  {
-    id: "2",
-    name: "Development API Key",
-    key: "pk_test_abcdef1234567890",
-    description: "API key for development and testing",
-    createdAt: "2024-01-10T09:15:00Z",
-    isActive: true,
-  },
-];
+export interface UpdateApiKeyData {
+  id: number;
+  name: string;
+  value: string;
+}
 
-export const apiKeyService = {
-  // Get all API keys
-  async getApiKeys(): Promise<ApiKey[]> {
-    try {
-      // For now, return mock data
-      // In production, uncomment the line below:
-      // const response = await api.get('/api-keys');
-      // return response.data;
+export class ApiKeyService {
+  static async fetchApiKeys(): Promise<ApiKey[]> {
+    const { data, error } = await supabase
+      .from("api_keys")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return mockApiKeys;
-    } catch (error) {
-      console.error("Error fetching API keys:", error);
-      throw new Error("Failed to fetch API keys");
+    if (error) {
+      throw new Error(`Failed to fetch API keys: ${error.message}`);
     }
-  },
 
-  // Create new API key
-  async createApiKey(name: string, description: string): Promise<ApiKey> {
-    try {
-      // For now, create mock data
-      // In production, uncomment the lines below:
-      // const response = await api.post('/api-keys', { name, description });
-      // return response.data;
+    return data || [];
+  }
 
-      const newKey: ApiKey = {
-        id: Date.now().toString(),
-        name,
-        key: `pk_${Math.random()
-          .toString(36)
-          .substr(2, 9)}_${Date.now().toString(36)}`,
-        description,
-        createdAt: new Date().toISOString(),
-        isActive: true,
-      };
+  static async createApiKey(data: CreateApiKeyData): Promise<ApiKey> {
+    const apiKeyValue = data.value || this.generateApiKey();
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      mockApiKeys.push(newKey);
-      return newKey;
-    } catch (error) {
-      console.error("Error creating API key:", error);
-      throw new Error("Failed to create API key");
+    const { data: newApiKey, error } = await supabase
+      .from("api_keys")
+      .insert([
+        {
+          name: data.name,
+          value: apiKeyValue,
+          usage: 0,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create API key: ${error.message}`);
     }
-  },
 
-  // Update API key
-  async updateApiKey(
-    id: string,
-    name: string,
-    description: string
-  ): Promise<ApiKey> {
-    try {
-      // For now, update mock data
-      // In production, uncomment the lines below:
-      // const response = await api.put(`/api-keys/${id}`, { name, description });
-      // return response.data;
+    return newApiKey;
+  }
 
-      const keyIndex = mockApiKeys.findIndex((key) => key.id === id);
-      if (keyIndex === -1) {
-        throw new Error("API key not found");
-      }
+  static async updateApiKey(data: UpdateApiKeyData): Promise<ApiKey> {
+    const { data: updatedApiKey, error } = await supabase
+      .from("api_keys")
+      .update({
+        name: data.name,
+        value: data.value,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id)
+      .select()
+      .single();
 
-      const updatedKey: ApiKey = {
-        ...mockApiKeys[keyIndex],
-        name,
-        description,
-      };
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      mockApiKeys[keyIndex] = updatedKey;
-      return updatedKey;
-    } catch (error) {
-      console.error("Error updating API key:", error);
-      throw new Error("Failed to update API key");
+    if (error) {
+      throw new Error(`Failed to update API key: ${error.message}`);
     }
-  },
 
-  // Delete API key
-  async deleteApiKey(id: string): Promise<void> {
-    try {
-      // For now, delete from mock data
-      // In production, uncomment the line below:
-      // await api.delete(`/api-keys/${id}`);
+    return updatedApiKey;
+  }
 
-      const keyIndex = mockApiKeys.findIndex((key) => key.id === id);
-      if (keyIndex === -1) {
-        throw new Error("API key not found");
-      }
+  static async deleteApiKey(id: number): Promise<void> {
+    const { error } = await supabase.from("api_keys").delete().eq("id", id);
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      mockApiKeys.splice(keyIndex, 1);
-    } catch (error) {
-      console.error("Error deleting API key:", error);
-      throw new Error("Failed to delete API key");
+    if (error) {
+      throw new Error(`Failed to delete API key: ${error.message}`);
     }
-  },
+  }
 
-  // Toggle API key status
-  async toggleApiKeyStatus(id: string): Promise<ApiKey> {
-    try {
-      // For now, toggle in mock data
-      // In production, uncomment the lines below:
-      // const response = await api.patch(`/api-keys/${id}/toggle`);
-      // return response.data;
+  static async incrementUsage(id: number): Promise<ApiKey> {
+    const { data: updatedApiKey, error } = await supabase
+      .from("api_keys")
+      .update({
+        usage: supabase.rpc("increment_usage", { key_id: id }),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
 
-      const keyIndex = mockApiKeys.findIndex((key) => key.id === id);
-      if (keyIndex === -1) {
-        throw new Error("API key not found");
-      }
-
-      const updatedKey: ApiKey = {
-        ...mockApiKeys[keyIndex],
-        isActive: !mockApiKeys[keyIndex].isActive,
-      };
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      mockApiKeys[keyIndex] = updatedKey;
-      return updatedKey;
-    } catch (error) {
-      console.error("Error toggling API key status:", error);
-      throw new Error("Failed to toggle API key status");
+    if (error) {
+      throw new Error(`Failed to increment usage: ${error.message}`);
     }
-  },
-};
+
+    return updatedApiKey;
+  }
+
+  static async loadSampleData(): Promise<void> {
+    const sampleData = [
+      {
+        name: "Production API Key",
+        value: "byw-prod-1234567890abcdef1234567890abcdef",
+        usage: 150,
+      },
+      {
+        name: "Development API Key",
+        value: "byw-dev-abcdef1234567890abcdef1234567890",
+        usage: 25,
+      },
+      {
+        name: "Testing API Key",
+        value: "byw-test-7890abcdef1234567890abcdef1234",
+        usage: 5,
+      },
+    ];
+
+    const { error } = await supabase.from("api_keys").insert(sampleData);
+
+    if (error) {
+      throw new Error(`Failed to load sample data: ${error.message}`);
+    }
+  }
+
+  private static generateApiKey(): string {
+    const prefix = "byw-";
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const length = 32;
+    let result = "";
+
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    return prefix + result;
+  }
+}
