@@ -177,5 +177,5 @@ const apiKeySlice = createSlice({
   },
 });
 
-export const { clearError, loadSampleData } = apiKeySlice.actions;
+export const { clearError } = apiKeySlice.actions;
 export default apiKeySlice.reducer;
