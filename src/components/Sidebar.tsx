@@ -50,7 +50,7 @@ const Sidebar = () => {
     {
       id: "api-playground",
       name: "API Playground",
-      href: "#",
+      href: "/playground",
       icon: (
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path
