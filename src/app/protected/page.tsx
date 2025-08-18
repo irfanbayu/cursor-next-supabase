@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { validateApiKey } from "../../services/apiKeyValidationService";
 import { Toast } from "../../components/Notification";
 
-const ProtectedPage = () => {
+// Component that uses useSearchParams - needs to be wrapped in Suspense
+const ProtectedContent = () => {
   const [isValidating, setIsValidating] = useState(true);
   const [validationResult, setValidationResult] = useState<{
     isValid: boolean;
@@ -194,6 +195,34 @@ const ProtectedPage = () => {
         onClose={() => setShowToast(false)}
       />
     </div>
+  );
+};
+
+// Fallback component for Suspense
+const ProtectedPageFallback = () => {
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Loading...
+          </h2>
+          <p className="text-gray-600">
+            Please wait while we prepare the validation page...
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main page component with Suspense boundary
+const ProtectedPage = () => {
+  return (
+    <Suspense fallback={<ProtectedPageFallback />}>
+      <ProtectedContent />
+    </Suspense>
   );
 };
 
