@@ -10,13 +10,20 @@
     "setup-supabase": "node scripts/setup-supabase.js"
   },
   "dependencies": {
+    "@langchain/community": "^0.3.53",
+    "@langchain/core": "^0.3.0",
+    "@langchain/openai": "^0.3.0",
     "@reduxjs/toolkit": "^2.8.2",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.11.0",
+    "langchain": "^0.3.31",
     "next": "15.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-redux": "^9.2.0"
+  },
+  "resolutions": {
+    "@langchain/core": "0.3.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
